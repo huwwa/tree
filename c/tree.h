@@ -16,13 +16,13 @@ typedef struct {
     size_t dir_count;
 } Counter;
 
-bool valid_path(const char *path);
+bool is_path_valid(const char *path);
 bool is_executable(const char *path);
-char *join_path(const char *root, const char *leaf);
-char *join_indent(const char *a, const char *b);
-int filter(const struct dirent *ent);
+char *create_full_path(const char *root, const char *leaf);
+char *create_next_indentation(const char *a, const char *b);
+int filter_non_hidden_files(const struct dirent *ent);
 void print_color(const char *color_code, const char *restrict fmt, ...);
 void traverse(const char *indent, const char *path, Counter *counter);
-void print_tree(const char *path);
+void print_directory_tree(const char *path);
 
 #endif //TREE_H

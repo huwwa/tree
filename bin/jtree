@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+java -cp ./build/ src.Tree $@

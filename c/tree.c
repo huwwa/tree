@@ -6,10 +6,11 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "tree.h"
 
-bool valid_path(const char *path)
+bool is_path_valid(const char *path)
 {
     return (access(path, F_OK) == 0);
 }
@@ -19,28 +20,38 @@ bool is_executable(const char *path)
     return (access(path, X_OK) == 0);
 }
 
-char *join_path(const char *root, const char *leaf)
+char *create_full_path(const char *root, const char *leaf)
 {
     size_t root_len = strlen(root);
     size_t leaf_len = strlen(leaf);
-    char *ret = malloc(root_len + leaf_len + 2);
-    memcpy(ret, root, root_len);
-    ret[root_len] = '/';
-    memcpy(ret + root_len + 1, leaf, leaf_len + 1);
+    char *ret;
+    if (root[root_len] == '/' || *leaf == '/') {
+        ret = malloc(root_len + leaf_len + 1);
+        assert(ret && "BUY MORE RAM!!\n");
+        memcpy(ret, root, root_len);
+        memcpy(ret + root_len, leaf, leaf_len + 1);
+    } else {
+        ret = malloc(root_len + leaf_len + 2);
+        assert(ret && "BUY MORE RAM!!\n");
+        memcpy(ret, root, root_len);
+        ret[root_len] = '/';
+        memcpy(ret + root_len + 1, leaf, leaf_len + 1);
+    }
     return ret;
 }
 
-char *join_indent(const char *a, const char *b)
+char *create_next_indentation(const char *a, const char *b)
 {
     size_t a_len = strlen(a);
     size_t b_len = strlen(b);
     char *ret = malloc(a_len + b_len + 1);
+    assert(ret && "BUY MORE RAM!!\n");
     memcpy(ret, a, a_len);
-    memcpy(ret, b, b_len + 1);
+    memcpy(ret + a_len, b, b_len + 1);
     return ret;
 }
 
-int filter(const struct dirent *ent)
+int filter_non_hidden_files(const struct dirent *ent)
 {
     return (ent->d_name[0] != '.');
 }
@@ -55,7 +66,7 @@ void print_color(const char *color_code, const char *restrict fmt, ...)
         vfprintf(stdout, fmt, ap);
         va_end(ap);
 
-        fprintf(stdout,  "\033[0m");
+        fprintf(stdout, RESET);
     } else {
         va_list ap;
         va_start(ap, fmt);
@@ -67,7 +78,7 @@ void print_color(const char *color_code, const char *restrict fmt, ...)
 void traverse(const char *indent, const char *path, Counter *counter)
 {
     struct dirent **namelist;
-    int n = scandir(path, &namelist, filter, alphasort);
+    int n = scandir(path, &namelist, filter_non_hidden_files, alphasort);
     if (n == -1) {
         fprintf(stderr, "could not open %s: %s\n", path, strerror(errno));
         exit(1);
@@ -78,11 +89,11 @@ void traverse(const char *indent, const char *path, Counter *counter)
         bool is_last = (i == n - 1);
         printf("%s%s", indent, is_last ? "└── " : "├── ");
 
-        char *absolute_path = join_path(path, entry->d_name);
+        char *absolute_path = create_full_path(path, entry->d_name);
         if (entry->d_type == DT_DIR) {
             print_blue("%s\n", entry->d_name);
             counter->dir_count++;
-            char *subindent = join_indent(indent, is_last ? "    " : "│   ");
+            char *subindent = create_next_indentation(indent, is_last ? "    " : "│   ");
             traverse(subindent, absolute_path, counter);
             free(subindent);
         } else {
@@ -99,9 +110,9 @@ void traverse(const char *indent, const char *path, Counter *counter)
     free(namelist);
 }
 
-void print_tree(const char *path)
+void print_directory_tree(const char *path)
 {
-    if (valid_path(path)) {
+    if (is_path_valid(path)) {
         print_blue("%s\n", path);
         Counter counter = {.dir_count = 1};
         traverse("", path, &counter);
@@ -123,6 +134,6 @@ int main(int argc, char **argv)
         exit(64);
     } 
 
-    print_tree(argv[1]);
+    print_directory_tree(argv[1]);
     return 0;
 }
