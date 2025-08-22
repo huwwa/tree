@@ -1,18 +1,12 @@
-A simple command-line utility to display a tree-like directory structure, similar to the `tree` command. 
+# Tree
 
-### Build
+A simple reimplementation of the `tree` command in **C** and **Java**.  
+It displays a tree-like directory structure from the command line.
+
+## Sample Output
 
 ```console
-# Java version
-make jtre && ./bin/jtree [path]
-# C version
-make ctree && ./bin/ctree [path]
-```
-
-# Sample Output:
-``` console
-./ctree .
- ./bin/ctree .
+$ ./bin/ctree .
 .
 ├── LICENSE
 ├── Makefile
@@ -27,4 +21,22 @@ make ctree && ./bin/ctree [path]
         └── Tree.java
 
 5 directories, 7 files
+````
+
+## Quick Start
+
+### Java version
+
+```console
+make jtree && ./bin/jtree [path]
 ```
+
+### C version
+
+```console
+make ctree && ./bin/ctree [path]
+```
+
+## License
+
+This project is licensed under the **BSD 2-Clause License** – see the [LICENSE](LICENSE) file for details.
