@@ -1,0 +1,3 @@
+set -xe
+
+cc -Wall -Wextra -Wno-unused -ggdb -fsanitize=address -o tree tree.c
