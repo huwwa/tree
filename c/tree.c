@@ -10,6 +10,8 @@
 
 #include "tree.h"
 
+Counter counter = {.dir_count = 1};
+
 bool is_path_valid(const char *path)
 {
     return (access(path, F_OK) == 0);
@@ -75,7 +77,7 @@ void print_color(const char *color_code, const char *restrict fmt, ...)
     }
 }
 
-void traverse(const char *indent, const char *path, Counter *counter)
+void traverse(const char *indent, const char *path)
 {
     struct dirent **namelist;
     int n = scandir(path, &namelist, filter_non_hidden_files, alphasort);
@@ -92,16 +94,16 @@ void traverse(const char *indent, const char *path, Counter *counter)
         char *absolute_path = create_full_path(path, entry->d_name);
         if (entry->d_type == DT_DIR) {
             print_blue("%s\n", entry->d_name);
-            counter->dir_count++;
+            counter.dir_count++;
             char *subindent = create_next_indentation(indent, is_last ? "    " : "│   ");
-            traverse(subindent, absolute_path, counter);
+            traverse(subindent, absolute_path);
             free(subindent);
         } else {
             if (is_executable(absolute_path)) 
                 print_green("%s\n", entry->d_name);
             else
                 printf("%s\n", entry->d_name);
-            counter->file_count++;
+            counter.file_count++;
         }
 
         free(absolute_path);
@@ -114,26 +116,31 @@ void print_directory_tree(const char *path)
 {
     if (is_path_valid(path)) {
         print_blue("%s\n", path);
-        Counter counter = {.dir_count = 1};
-        traverse("", path, &counter);
-        size_t dir_count = counter.dir_count;
-        size_t file_count = counter.file_count;
-        char *s1 = (dir_count > 1) ? "directories" : "directory";
-        char *s2 = (file_count > 1) ? "files" : "file";
-        printf("\n%zu %s, %zu %s\n", dir_count, s1, file_count, s2);
+        traverse("", path);
     } else {
         fprintf(stderr, "could not open %s: %s.\n", path, strerror(errno));
         exit(64);
     }
 }
 
+void print_count(void)
+{
+    size_t dir_count = counter.dir_count;
+    size_t file_count = counter.file_count;
+    char *s1 = (dir_count > 1) ? "directories" : "directory";
+    char *s2 = (file_count > 1) ? "files" : "file";
+    printf("\n%zu %s, %zu %s\n", dir_count, s1, file_count, s2);
+}
+
 int main(int argc, char **argv)
 {
-    if (argc != 2) {
-        fprintf(stderr, "USAGE:\n\t %s [path]\n", argv[0]);
-        exit(64);
-    } 
+    if (argc == 1) {
+        print_directory_tree(".");
+    } else {
+        for (int i = 1; i < argc; ++i)
+            print_directory_tree(argv[i]);
+    }
 
-    print_directory_tree(argv[1]);
+    print_count();
     return 0;
 }
