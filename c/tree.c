@@ -8,57 +8,82 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "tree.h"
+#define BLUE   "\033[1;34m"
+#define GREEN  "\033[1;32m"
+#define RESET  "\033[0m"
 
-Counter counter = {.dir_count = 1};
+typedef struct {
+    unsigned int files;
+    unsigned int dirs;
+}  Stats;
 
-bool is_path_valid(const char *path)
+typedef struct {
+    char **items;
+    size_t count;
+    size_t capacity;
+} Paths;
+
+static void die(const char *fmt, ...);
+static char *pathjoin(const char *root, const char *leaf);
+static char *indentjoin(const char *a, const char *b);
+static int ishidden(const struct dirent *ent);
+static void cprint(const char *color_code, const char *restrict fmt, ...);
+static void traverse(const char *path, const char *indent, int depth);
+static void treeprint(const char *path);
+static void info(void);
+static void usage(void);
+static void load(char *path);
+static void run(void);
+static void cleanup(void);
+
+static int max_depth = -1;
+static Stats stats = {0};
+static Paths paths = {0};
+
+void die(const char *fmt, ...)
 {
-    return (access(path, F_OK) == 0);
+    va_list ap;
+    va_start(ap, fmt);
+    vprintf(fmt, ap);
+    va_end(ap);
+
+    exit(EXIT_FAILURE);
 }
 
-bool is_executable(const char *path)
+char *pathjoin(const char *root, const char *leaf)
 {
-    return (access(path, X_OK) == 0);
-}
-
-char *create_full_path(const char *root, const char *leaf)
-{
-    size_t root_len = strlen(root);
-    size_t leaf_len = strlen(leaf);
+    bool needsep;
+    size_t rootlen, size;
     char *ret;
-    if (root[root_len] == '/' || *leaf == '/') {
-        ret = malloc(root_len + leaf_len + 1);
-        assert(ret && "BUY MORE RAM!!\n");
-        memcpy(ret, root, root_len);
-        memcpy(ret + root_len, leaf, leaf_len + 1);
-    } else {
-        ret = malloc(root_len + leaf_len + 2);
-        assert(ret && "BUY MORE RAM!!\n");
-        memcpy(ret, root, root_len);
-        ret[root_len] = '/';
-        memcpy(ret + root_len + 1, leaf, leaf_len + 1);
-    }
+
+    rootlen = strlen(root);
+    needsep = (rootlen > 0 && root[rootlen - 1] != '/');
+    size = rootlen + needsep + strlen(leaf) + 1;
+    ret = malloc(size);
+    assert(ret && "no enough memory.");
+
+    snprintf(ret, size, "%s%s%s", root, needsep ? "/" : "", leaf);
     return ret;
 }
 
-char *create_next_indentation(const char *a, const char *b)
+char *indentjoin(const char *a, const char *b)
 {
-    size_t a_len = strlen(a);
-    size_t b_len = strlen(b);
-    char *ret = malloc(a_len + b_len + 1);
-    assert(ret && "BUY MORE RAM!!\n");
-    memcpy(ret, a, a_len);
-    memcpy(ret + a_len, b, b_len + 1);
+    char *ret;
+    size_t size;
+
+    size = strlen(a) + strlen(b) + 1;
+    ret = malloc(size);
+    assert(ret && "no enough memory.");
+    snprintf(ret, size, "%s%s", a, b);
     return ret;
 }
 
-int filter_non_hidden_files(const struct dirent *ent)
+int ishidden(const struct dirent *e)
 {
-    return (ent->d_name[0] != '.');
+    return (e->d_name[0] != '.');
 }
 
-void print_color(const char *color_code, const char *restrict fmt, ...)
+void cprint(const char *color_code, const char *restrict fmt, ...)
 {
     if (isatty(STDOUT_FILENO)) {
         fprintf(stdout, "%s", color_code);
@@ -77,70 +102,127 @@ void print_color(const char *color_code, const char *restrict fmt, ...)
     }
 }
 
-void traverse(const char *indent, const char *path)
+void traverse(const char *path, const char *indent, int depth)
 {
-    struct dirent **namelist;
-    int n = scandir(path, &namelist, filter_non_hidden_files, alphasort);
-    if (n == -1) {
-        fprintf(stderr, "could not open %s: %s\n", path, strerror(errno));
-        exit(1);
-    }
+    int n;
+    struct dirent **list;
 
+    if (max_depth != -1 && depth > max_depth)
+        return;
+
+    n = scandir(path, &list, ishidden, alphasort);
+    if (n == -1)
+        die("could not open `%s`: %s\n", path, strerror(errno));
+
+    struct dirent *e;
+    char *subindent, *full;
     for (int i = 0; i < n; ++i) {
-        struct dirent *entry = namelist[i];
-        bool is_last = (i == n - 1);
-        printf("%s%s", indent, is_last ? "└── " : "├── ");
 
-        char *absolute_path = create_full_path(path, entry->d_name);
-        if (entry->d_type == DT_DIR) {
-            print_blue("%s\n", entry->d_name);
-            counter.dir_count++;
-            char *subindent = create_next_indentation(indent, is_last ? "    " : "│   ");
-            traverse(subindent, absolute_path);
+        printf("%s%s", indent, (i == n-1) ? "└── " : "├── ");
+
+        e = list[i];
+        full = pathjoin(path, e->d_name);
+        if (e->d_type == DT_DIR) {
+            cprint(BLUE, "%s\n", e->d_name);
+            stats.dirs++;
+
+            subindent = indentjoin(indent, (i == n-1) ? "    " : "│   ");
+            traverse(full, subindent, depth + 1);
             free(subindent);
         } else {
-            if (is_executable(absolute_path)) 
-                print_green("%s\n", entry->d_name);
-            else
-                printf("%s\n", entry->d_name);
-            counter.file_count++;
+            cprint((access(full, X_OK) == 0) ? GREEN : "", "%s\n", e->d_name);
+            stats.files++;
         }
 
-        free(absolute_path);
-        free(entry);
+        free(full);
+        free(e);
     }
-    free(namelist);
+    free(list);
 }
 
-void print_directory_tree(const char *path)
+void treeprint(const char *path)
 {
-    if (is_path_valid(path)) {
-        print_blue("%s\n", path);
-        traverse("", path);
-    } else {
-        fprintf(stderr, "could not open %s: %s.\n", path, strerror(errno));
-        exit(64);
-    }
+    if (access(path, F_OK) != 0)
+        die("could not open `%s`: %s.\n", path, strerror(errno));
+
+    cprint(BLUE, "%s\n", path);
+    traverse(path, "", 1);
 }
 
-void print_count(void)
+void info(void)
 {
-    size_t dir_count = counter.dir_count;
-    size_t file_count = counter.file_count;
-    char *s1 = (dir_count > 1) ? "directories" : "directory";
-    char *s2 = (file_count > 1) ? "files" : "file";
-    printf("\n%zu %s, %zu %s\n", dir_count, s1, file_count, s2);
+    printf("\n%u %s, %u %s\n", 
+            stats.dirs , (stats.dirs > 1) ? "directories" : "directory", 
+            stats.files, (stats.files > 1) ? "files" : "file");
 }
 
-int main(int argc, char **argv)
+void usage(void)
 {
-    if (argc == 1) {
-        print_directory_tree(".");
-    } else {
-        for (int i = 1; i < argc; ++i)
-            print_directory_tree(argv[i]);
+    fprintf(stderr,
+            "Usage: tree [OPTION]... [PATH]...\n\n"
+            "Options:\n"
+            "  -L level     Limit the display depth of the tree\n"
+            "  -h           Show this help message\n");
+    exit(EXIT_SUCCESS);
+}
+
+
+void load(char *path)
+{
+    stats.dirs++;
+    if ((paths.count+1) * sizeof(paths.items[0]) >= paths.capacity)
+        if (!(paths.items = realloc(paths.items, (paths.capacity += 1024))))
+            die("could not reallocate %zu bytes.", paths.capacity);
+
+    paths.items[paths.count++] = path;
+}
+
+void run(void)
+{
+    for (size_t i = 0; i < paths.count; ++i)
+        treeprint(paths.items[i]);
+}
+
+void cleanup()
+{
+    free(paths.items);
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc == 1)
+        load(".");
+
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i][0] == '-') {
+            switch (argv[i][1]) {
+                case 'h':
+                    usage(); break;
+                case 'L':
+                    if (argv[++i]) {
+                        max_depth = atoi(argv[i]);
+                        if (max_depth < 1) {
+                            die("tree: invalid level for -L\n");
+                        }
+                    } else {
+                        die("tree: missing argument for -L\n");
+                    } break;
+                default:
+                    die("tree: invalid option '%s'\n"
+                            "Try 'tree -h' for help\n", argv[i]);
+                    break;
+            }
+        } else {
+            load(argv[i]);
+        }
     }
 
-    print_count();
-    return 0;
+    if (argc == 3 && max_depth > 0)
+        load(".");
+
+    run();
+    info();
+
+    cleanup();
+    return EXIT_SUCCESS;
 }
