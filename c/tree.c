@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sys/stat.h>
 
 #define BLUE   "\033[1;34m"
 #define GREEN  "\033[1;32m"
@@ -60,7 +61,7 @@ char *pathjoin(const char *root, const char *leaf)
     size = rootlen + needsep + strlen(leaf) + 1;
 
     if(!(ret = malloc(size)))
-        die("failed to allocate `%u`.\n", size);
+        die("failed to allocate `%zu`.\n", size);
 
     snprintf(ret, size, "%s%s%s", root, needsep ? "/" : "", leaf);
     return ret;
@@ -73,7 +74,7 @@ char *indentjoin(const char *a, const char *b)
 
     size = strlen(a) + strlen(b) + 1;
     if(!(ret = malloc(size)))
-        die("failed to allocate `%u`.\n", size);
+        die("failed to allocate `%zu`.\n", size);
     snprintf(ret, size, "%s%s", a, b);
     return ret;
 }
@@ -114,6 +115,7 @@ void traverse(const char *path, const char *indent, int depth)
     if (n == -1)
         die("could not open `%s`: %s\n", path, strerror(errno));
 
+    struct stat sb;
     struct dirent *e;
     char *subindent, *absolute_path;
     for (int i = 0; i < n; ++i) {
@@ -122,7 +124,7 @@ void traverse(const char *path, const char *indent, int depth)
 
         e = list[i];
         absolute_path = pathjoin(path, e->d_name);
-        if (e->d_type == DT_DIR) {
+        if (stat(absolute_path, &sb) == 0 && S_ISDIR(sb.st_mode)) {
             cprint(BLUE, "%s\n", e->d_name);
             stats.dirs++;
 
