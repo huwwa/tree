@@ -31,7 +31,7 @@ static void traverse(const char *path, const char *indent, int depth);
 static void treeprint(const char *path);
 static void info(void);
 static void usage(void);
-static void load(char *path);
+static void add_path(char *path);
 static void run(void);
 static void cleanup(void);
 
@@ -115,26 +115,26 @@ void traverse(const char *path, const char *indent, int depth)
         die("could not open `%s`: %s\n", path, strerror(errno));
 
     struct dirent *e;
-    char *subindent, *full;
+    char *subindent, *absolute_path;
     for (int i = 0; i < n; ++i) {
 
         printf("%s%s", indent, (i == n-1) ? "└── " : "├── ");
 
         e = list[i];
-        full = pathjoin(path, e->d_name);
+        absolute_path = pathjoin(path, e->d_name);
         if (e->d_type == DT_DIR) {
             cprint(BLUE, "%s\n", e->d_name);
             stats.dirs++;
 
             subindent = indentjoin(indent, (i == n-1) ? "    " : "│   ");
-            traverse(full, subindent, depth + 1);
+            traverse(absolute_path, subindent, depth + 1);
             free(subindent);
         } else {
-            cprint((access(full, X_OK) == 0) ? GREEN : "", "%s\n", e->d_name);
+            cprint((access(absolute_path, X_OK) == 0) ? GREEN : "", "%s\n", e->d_name);
             stats.files++;
         }
 
-        free(full);
+        free(absolute_path);
     }
     free(list);
 }
@@ -166,12 +166,12 @@ void usage(void)
 }
 
 
-void load(char *path)
+void add_path(char *path)
 {
     stats.dirs++;
-    if (paths.count >= paths.capacity)
-        if (!(paths.items = realloc(paths.items, (paths.capacity += 256)*sizeof(*paths.items))))
-            die("could not reallocate %zu bytes.", paths.capacity);
+    if ((paths.count+1) >= paths.capacity)
+        if (!(paths.items = realloc(paths.items, sizeof(*paths.items)*(paths.capacity += 1024))))
+            die("cannot realloc %zu\n", sizeof(*paths.items)*paths.capacity);
 
     paths.items[paths.count++] = path;
 }
@@ -184,6 +184,7 @@ void run(void)
 
 void cleanup()
 {
+    /*no strdup is used!*/
     free(paths.items);
 }
 
@@ -198,7 +199,6 @@ int main(int argc, char *argv[])
                     if (i+1 < argc) {
                         char *end;
                         max_depth = (int) strtol(argv[++i], &end, 10);
-;
                         if (*end != '\0' || max_depth < 1) {
                             die("tree: invalid level for -L\n");
                         }
@@ -211,12 +211,12 @@ int main(int argc, char *argv[])
                     break;
             }
         } else {
-            load(argv[i]);
+            add_path(argv[i]);
         }
     }
 
     if (paths.count == 0)
-        load(".");
+        add_path(".");
 
     run();
     info();
