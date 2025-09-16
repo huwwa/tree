@@ -25,7 +25,7 @@ typedef struct {
 static void die(const char *fmt, ...);
 static char *pathjoin(const char *root, const char *leaf);
 static char *indentjoin(const char *a, const char *b);
-static int ishidden(const struct dirent *ent);
+static int filter_hidden(const struct dirent *ent);
 static void cprint(const char *color_code, const char *restrict fmt, ...);
 static void traverse(const char *path, const char *indent, int depth);
 static void treeprint(const char *path);
@@ -78,7 +78,7 @@ char *indentjoin(const char *a, const char *b)
     return ret;
 }
 
-int ishidden(const struct dirent *e)
+int filter_hidden(const struct dirent *e)
 {
     return (e->d_name[0] != '.');
 }
@@ -110,7 +110,7 @@ void traverse(const char *path, const char *indent, int depth)
     if (max_depth != -1 && depth > max_depth)
         return;
 
-    n = scandir(path, &list, ishidden, alphasort);
+    n = scandir(path, &list, filter_hidden, alphasort);
     if (n == -1)
         die("could not open `%s`: %s\n", path, strerror(errno));
 
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (argc == 1 || (argc == 3 && max_depth > 0))
+    if (paths.count == 0)
         load(".");
 
     run();
