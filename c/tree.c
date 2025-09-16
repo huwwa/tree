@@ -6,7 +6,6 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdarg.h>
-#include <assert.h>
 
 #define BLUE   "\033[1;34m"
 #define GREEN  "\033[1;32m"
@@ -44,7 +43,7 @@ void die(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    vprintf(fmt, ap);
+    vfprintf(stderr, fmt, ap);
     va_end(ap);
 
     exit(EXIT_FAILURE);
@@ -59,8 +58,9 @@ char *pathjoin(const char *root, const char *leaf)
     rootlen = strlen(root);
     needsep = (rootlen > 0 && root[rootlen - 1] != '/');
     size = rootlen + needsep + strlen(leaf) + 1;
-    ret = malloc(size);
-    assert(ret && "no enough memory.");
+
+    if(!(ret = malloc(size)))
+        die("failed to allocate `%u`.\n", size);
 
     snprintf(ret, size, "%s%s%s", root, needsep ? "/" : "", leaf);
     return ret;
@@ -72,8 +72,8 @@ char *indentjoin(const char *a, const char *b)
     size_t size;
 
     size = strlen(a) + strlen(b) + 1;
-    ret = malloc(size);
-    assert(ret && "no enough memory.");
+    if(!(ret = malloc(size)))
+        die("failed to allocate `%u`.\n", size);
     snprintf(ret, size, "%s%s", a, b);
     return ret;
 }
@@ -135,7 +135,6 @@ void traverse(const char *path, const char *indent, int depth)
         }
 
         free(full);
-        free(e);
     }
     free(list);
 }
@@ -170,8 +169,8 @@ void usage(void)
 void load(char *path)
 {
     stats.dirs++;
-    if ((paths.count+1) * sizeof(paths.items[0]) >= paths.capacity)
-        if (!(paths.items = realloc(paths.items, (paths.capacity += 1024))))
+    if (paths.count >= paths.capacity)
+        if (!(paths.items = realloc(paths.items, (paths.capacity += 256)*sizeof(*paths.items))))
             die("could not reallocate %zu bytes.", paths.capacity);
 
     paths.items[paths.count++] = path;
@@ -190,18 +189,17 @@ void cleanup()
 
 int main(int argc, char *argv[])
 {
-    if (argc == 1)
-        load(".");
-
     for (int i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
                 case 'h':
                     usage(); break;
                 case 'L':
-                    if (argv[++i]) {
-                        max_depth = atoi(argv[i]);
-                        if (max_depth < 1) {
+                    if (i+1 < argc) {
+                        char *end;
+                        max_depth = (int) strtol(argv[++i], &end, 10);
+;
+                        if (*end != '\0' || max_depth < 1) {
                             die("tree: invalid level for -L\n");
                         }
                     } else {
@@ -217,7 +215,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (argc == 3 && max_depth > 0)
+    if (argc == 1 || (argc == 3 && max_depth > 0))
         load(".");
 
     run();
