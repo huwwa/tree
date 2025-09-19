@@ -13,11 +13,6 @@
 #define RESET  "\033[0m"
 
 typedef struct {
-    unsigned int files;
-    unsigned int dirs;
-}  Stats;
-
-typedef struct {
     char **items;
     size_t count;
     size_t capacity;
@@ -36,8 +31,10 @@ static void add_path(char *path);
 static void run(void);
 static void cleanup(void);
 
+/* Globals */
+static unsigned int file_count = 0;
+static unsigned int dir_count = 0;
 static int max_depth = -1;
-static Stats stats = {0};
 static Paths paths = {0};
 
 void die(const char *fmt, ...)
@@ -126,14 +123,14 @@ void traverse(const char *path, const char *indent, int depth)
         absolute_path = pathjoin(path, e->d_name);
         if (stat(absolute_path, &sb) == 0 && S_ISDIR(sb.st_mode)) {
             cprint(BLUE, "%s\n", e->d_name);
-            stats.dirs++;
+            dir_count++;
 
             subindent = indentjoin(indent, (i == n-1) ? "    " : "│   ");
             traverse(absolute_path, subindent, depth + 1);
             free(subindent);
         } else {
             cprint((access(absolute_path, X_OK) == 0) ? GREEN : "", "%s\n", e->d_name);
-            stats.files++;
+            file_count++;
         }
 
         free(absolute_path);
@@ -153,8 +150,8 @@ void treeprint(const char *path)
 void info(void)
 {
     printf("\n%u %s, %u %s\n", 
-            stats.dirs , (stats.dirs > 1) ? "directories" : "directory", 
-            stats.files, (stats.files > 1) ? "files" : "file");
+            dir_count , (dir_count > 1) ? "directories" : "directory", 
+            file_count, (file_count > 1) ? "files" : "file");
 }
 
 void usage(void)
@@ -170,7 +167,7 @@ void usage(void)
 
 void add_path(char *path)
 {
-    stats.dirs++;
+    dir_count++;
     if ((paths.count+1) >= paths.capacity)
         if (!(paths.items = realloc(paths.items, sizeof(*paths.items)*(paths.capacity += 1024))))
             die("cannot realloc %zu\n", sizeof(*paths.items)*paths.capacity);
