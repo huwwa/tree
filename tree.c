@@ -83,17 +83,16 @@ int filter_hidden(const struct dirent *e)
 
 void cprint(const char *color_code, const char *restrict fmt, ...)
 {
+    va_list ap;
     if (isatty(STDOUT_FILENO)) {
         fprintf(stdout, "%s", color_code);
 
-        va_list ap;
         va_start(ap, fmt);
         vfprintf(stdout, fmt, ap);
         va_end(ap);
 
         fprintf(stdout, RESET);
     } else {
-        va_list ap;
         va_start(ap, fmt);
         vfprintf(stdout, fmt, ap);
         va_end(ap);
@@ -187,32 +186,37 @@ void cleanup()
     free(paths.items);
 }
 
-int main(int argc, char *argv[])
+void parse_args(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
-        if (argv[i][0] == '-') {
-            switch (argv[i][1]) {
-                case 'h':
-                    usage(); break;
-                case 'L':
-                    if (i+1 < argc) {
-                        char *end;
-                        max_depth = (int) strtol(argv[++i], &end, 10);
-                        if (*end != '\0' || max_depth < 1) {
-                            die("tree: invalid level for -L\n");
-                        }
-                    } else {
-                        die("tree: missing argument for -L\n");
-                    } break;
-                default:
-                    die("tree: invalid option '%s'\n"
-                            "Try 'tree -h' for help\n", argv[i]);
-                    break;
-            }
-        } else {
-            add_path(argv[i]);
-        }
+	if (argv[i][0] == '-') {
+	    switch (argv[i][1]) {
+		case 'h':
+		    usage(); break;
+		case 'L':
+		    if (i+1 < argc) {
+			char *end;
+			max_depth = (int) strtol(argv[++i], &end, 10);
+			if (*end != '\0' || max_depth < 1) {
+			    die("tree: invalid level for -L\n");
+			}
+		    } else {
+			die("tree: missing argument for -L\n");
+		    } break;
+		default:
+		    die("tree: invalid option '%s'\n"
+			    "Try 'tree -h' for help\n", argv[i]);
+		    break;
+	    }
+	} else {
+	    add_path(argv[i]);
+	}
     }
+}
+
+int main(int argc, char *argv[])
+{
+    parse_args(argc, argv);
 
     if (paths.count == 0)
         add_path(".");
