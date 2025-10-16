@@ -1,7 +1,6 @@
 # Tree
 
-A simple reimplementation of the `tree` command in **C** and **Java**.  
-It displays a tree-like directory structure from the command line.
+A simple reimplementation of the `tree` command.
 
 ## Sample Output
 
@@ -21,20 +20,12 @@ $ ./bin/ctree .
         └── Tree.java
 
 5 directories, 7 files
-````
+```
 
 ## Quick Start
 
-### Java version
-
 ```console
-make jtree && ./bin/jtree [path]
-```
-
-### C version
-
-```console
-make ctree && ./bin/ctree [path]
+make tree && ./tree
 ```
 
 ## License
