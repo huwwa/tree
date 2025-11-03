@@ -1,10 +1,9 @@
-CFLAGS :=  -Wall -Wextra -O3
-#CFLAGS :=  -Wall -Wextra -ggdb -fsanitize=address
+include config.mk
 
 tree: tree.c
-	cc $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $<
 
 clean:
-	rm -rf $(BUILDIR)
+	rm -rf tree
 
-.PHONY: clean
+.PHONY: tree clean
