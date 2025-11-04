@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define PUB_FUNC
+
 #define BLUE   "\033[1;34m"
 #define GREEN  "\033[1;32m"
 #define RESET  "\033[0m"

@@ -16,14 +16,13 @@
 
 #define add_path(path) dynarray_add(&list.paths, &list.nb_paths, strdup(path));
 
-ST_DATA int filter_hidden(const struct dirent *ent);
-ST_DATA void traverse(const char *path, const char *indent, int depth);
-ST_DATA void tree_print(const char *path);
+void traverse(const char *path, const char *indent, int depth);
+void tree_print(const char *path);
 
-ST_DATA void parse_args(int argc, char **argv);
-ST_DATA void usage(void);
-ST_DATA void run(void);
-ST_DATA void cleanup(void);
+void parse_args(int argc, char **argv);
+void usage(void);
+void run(void);
+void cleanup(void);
 
 /* Globals */
 ST_DATA unsigned int file_count = 0;

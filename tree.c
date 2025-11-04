@@ -1,6 +1,6 @@
 #include "tree.h"
 
-ST_DATA void traverse(const char *path, const char *indent, int depth)
+void traverse(const char *path, const char *indent, int depth)
 {
     int n;
     struct dirent **list;
@@ -38,7 +38,7 @@ ST_DATA void traverse(const char *path, const char *indent, int depth)
     free(list);
 }
 
-ST_DATA void tree_print(const char *path)
+void tree_print(const char *path)
 {
     if (access(path, F_OK) != 0)
         die("could not open '%s': %s.\n", path, strerror(errno));
@@ -48,7 +48,7 @@ ST_DATA void tree_print(const char *path)
     traverse(path, "", 1);
 }
 
-ST_DATA void usage(void)
+void usage(void)
 {
     die("tree " VERSION " (c) 2025 huwwana@gmail.com\n" \
             "Usage: tree [OPTION]... [PATH]...\n\n"
@@ -57,7 +57,7 @@ ST_DATA void usage(void)
             "  -h           Show this help message\n");
 }
 
-ST_DATA void parse_args(int argc, char **argv)
+void parse_args(int argc, char **argv)
 {
     for (int i = 1; i < argc; ++i) {
 	if (argv[i][0] == '-') {
@@ -86,7 +86,7 @@ ST_DATA void parse_args(int argc, char **argv)
     }
 }
 
-ST_DATA void run(void)
+void run(void)
 {
     if (list.nb_paths == 0)
         add_path(".");
@@ -99,7 +99,7 @@ ST_DATA void run(void)
             file_count, (file_count > 1) ? "files" : "file");
 }
 
-ST_DATA void cleanup(void)
+void cleanup(void)
 {
     dynarray_reset(&list.paths, &list.nb_paths);
 }

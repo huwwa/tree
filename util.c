@@ -1,6 +1,6 @@
 #include "util.h"
 
-void dynarray_add(void *ptab, int *nb_ptr, void *data)
+PUB_FUNC void dynarray_add(void *ptab, int *nb_ptr, void *data)
 {
     int nb, nb_alloc;
     void **pp;
@@ -17,7 +17,7 @@ void dynarray_add(void *ptab, int *nb_ptr, void *data)
     *nb_ptr = nb;
 }
 
-void dynarray_reset(void *pp, int *n)
+PUB_FUNC void dynarray_reset(void *pp, int *n)
 {
     void **p;
     for (p = *(void***)pp; *n; ++p, --*n)
@@ -27,7 +27,7 @@ void dynarray_reset(void *pp, int *n)
     *(void**)pp = NULL;
 }
 
-void die(const char *fmt, ...)
+PUB_FUNC void die(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -37,7 +37,7 @@ void die(const char *fmt, ...)
     exit(EXIT_FAILURE);
 }
 
-char *path_join(const char *root, const char *leaf)
+PUB_FUNC char *path_join(const char *root, const char *leaf)
 {
     int needsep, rootlen, size;
     char *ret;
@@ -53,7 +53,7 @@ char *path_join(const char *root, const char *leaf)
     return ret;
 }
 
-char *join(const char *a, const char *b)
+PUB_FUNC char *join(const char *a, const char *b)
 {
     char *ret;
     size_t size;
@@ -65,7 +65,7 @@ char *join(const char *a, const char *b)
     return ret;
 }
 
-void cprint(const char *color_code, const char *restrict fmt, ...)
+PUB_FUNC void cprint(const char *color_code, const char *restrict fmt, ...)
 {
     va_list ap;
     if (isatty(STDOUT_FILENO)) {
