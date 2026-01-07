@@ -1,9 +1,10 @@
-include config.mk
+CC ?= cc
+CFLAGS = -Wall -Wextra -O2
 
 tree: tree.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
 	rm -rf tree
 
-.PHONY: tree clean
+.PHONY: clean
